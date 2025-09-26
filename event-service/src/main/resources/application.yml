@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: event-service
+  mvc:
+    converters:
+      preferred-json-mapper: jackson
+  datasource:
+    url: jdbc:h2:mem:events;DB_CLOSE_DELAY=-1
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+  kafka:
+    bootstrap-servers: localhost:19092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: 8083
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

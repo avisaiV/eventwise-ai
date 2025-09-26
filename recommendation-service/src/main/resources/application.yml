@@ -1,0 +1,49 @@
+explainer:
+  mode: llm   # change to "rule" for rule-based, "llm" for LLM path
+
+ollama:
+  base-url: http://localhost:11434
+  model: llama3.2
+
+spring:
+  application:
+    name: recommendation-service
+  mvc:
+    converters:
+      preferred-json-mapper: jackson
+  cloud:
+    stream:
+      function:
+        definition: bookingsStream           # <-- matches the @Bean name in your code
+      bindings:
+        bookingsStream-in-0:
+          destination: bookings
+          content-type: application/json
+          group: reco
+        # optional: you can publish the KTable changelog to a topic too, but not required
+      kafka:
+        binder:
+          brokers: localhost:19092
+        streams:
+          binder:
+            configuration:
+              # Make sure JSON maps to BookingEvent without type headers
+              spring.json.value.default.type: com.eventwise.reco.stream.BookingEvent
+          bindings:
+            bookingsStream-in-0:
+              consumer:
+                startOffset: earliest
+
+server:
+  port: 8084
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

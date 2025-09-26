@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: user-service
+  mvc:
+    converters:
+      preferred-json-mapper: jackson
+
+server:
+  port: 8082
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
