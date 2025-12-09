@@ -1,6 +1,6 @@
 # EventWise
 
-> EventWise is a lightweight event-booking platform showcasing modern backend engineering: microservices, event-driven messaging, real-time streaming, and LLM-powered explanations — all running locally on Windows.
+> EventWise is a lightweight event-booking platform showcasing modern backend engineering: microservices, event-driven messaging, real-time streaming, and LLM-powered explanations, all running locally on Windows.
 
 ---
 
