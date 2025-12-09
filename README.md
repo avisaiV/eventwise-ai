@@ -1,102 +1,92 @@
-EventWise — End-to-End Demo (Windows)
+EventWise – Event Platform Microservices Demo
 
-EventWise is a tiny event platform showing:
+EventWise is a lightweight event-booking platform showcasing modern backend engineering:
+microservices, event-driven messaging, real-time streaming, and LLM-powered explanations.
 
-- CRUD microservices (Events, Bookings)
-- Event-driven messaging (Kafka via Redpanda)
-- Real-time stream processing (Spring Cloud Stream + Kafka Streams)
-- Human-readable explanations (rule-based or local LLM via Ollama, free)
+What EventWise Includes
 
-1) Prerequisites (Windows)
+CRUD microservices
 
-Use winget (or install manually).
-Do not run these if you already have them installed.
+event-service (events, capacity)
 
-# Java 21 (Temurin)
-winget install -e --id EclipseAdoptium.Temurin.21.JDK
+booking-service (bookings, validation, emits events)
 
-# Maven
-winget install -e --id Apache.Maven
+recommendation-service (Kafka Streams, popularity scoring, LLM explanations)
 
-# Docker Desktop
-winget install -e --id Docker.DockerDesktop
+Event-driven messaging via Kafka (Redpanda)
 
-# Postman (optional if you prefer over PowerShell)
-winget install -e --id Postman.Postman
+Real-time aggregation using Spring Cloud Stream + Kafka Streams
 
-# Ollama (local LLM runtime)
-winget install -e --id Ollama.Ollama
+Human-readable explanations using either:
 
+Rule-based engine, or
 
-Verify:
+Local LLM through Ollama (free, private)
 
+Full Windows setup guide for quick testing
+
+Running the Project (Windows)
+
+Make sure you have Java 21, Maven, Docker Desktop, and Ollama installed.
+
+Verify installs
 java -version
 mvn -v
 docker --version
 ollama --version
 
-
-If Docker complains about virtualization/WSL: enable CPU virtualization in BIOS, turn on Virtual Machine Platform and Windows Hypervisor Platform in “Turn Windows features on or off”, install WSL2, then reboot and start Docker Desktop.
-
-2) Clone and build
+Clone & Build
 git clone https://github.com/avisaiV/eventwise-ai.git
 cd eventwise-ai
-
-# one-time build (downloads dependencies)
 mvn -DskipTests clean package
 
-3) First-time LLM setup (local & free)
-# Start Ollama background server (if it’s not already running)
-ollama serve   # if you see “port already in use”, it’s already running
+Start Infrastructure (Kafka / Redpanda)
 
-# Pull a small general model (~2 GB)
-ollama pull llama3.2
-
-4) Start infrastructure (Kafka/Redpanda)
-
-From repo root:
+From the project root:
 
 docker compose up -d
 
 
-Check:
+Check running containers:
 
-docker ps  # expect redpandadata/redpanda ... ports 9092,19092
+docker ps
 
-5) Run the microservices (open 3 terminals)
-
-Optional: make JSON text look nice on Windows:
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
-
+Start All Microservices
 Terminal A — event-service (8083)
-
-cd eventwise-ai\event-service
+cd event-service
 mvn -q -DskipTests spring-boot:run
 
-
 Terminal B — booking-service (8081)
-
-cd eventwise-ai\booking-service
+cd booking-service
 mvn -q -DskipTests spring-boot:run
 
 Terminal C — recommendation-service (8084)
 
-cd eventwise-ai\recommendation-service
+Before running, set environment variables for LLM mode:
 
-Set env vars in this terminal before starting up the service:
-
-$env:EXPLAINER_MODE = 'llm'              # use local LLM
+$env:EXPLAINER_MODE = 'llm'
 $env:OLLAMA_BASE_URL = 'http://localhost:11434'
 $env:OLLAMA_MODEL = 'llama3.2'
 
+
+Then run:
+
+cd recommendation-service
 mvn -q -DskipTests spring-boot:run
 
-6) Quick end-to-end demo (copy/paste)
+LLM Setup (Ollama)
 
-A) Seed events
+Start Ollama server:
 
+ollama serve
+
+
+Pull the lightweight model:
+
+ollama pull llama3.2
+
+Quick End-to-End Demo
+A) Create Events
 $e1 = Invoke-RestMethod -Method Post http://localhost:8083/events `
   -ContentType application/json `
   -Body (@{ title="UOW Tech Fest"; category="Tech"; capacity=100 } | ConvertTo-Json)
@@ -105,50 +95,58 @@ $e2 = Invoke-RestMethod -Method Post http://localhost:8083/events `
   -ContentType application/json `
   -Body (@{ title="AI Summit"; category="Tech"; capacity=5 } | ConvertTo-Json)
 
-B) Create bookings (capacity guard blocks the last one)
-
+B) Create Bookings
 Invoke-RestMethod -Method Post http://localhost:8081/bookings `
   -ContentType application/json `
-  -Body (@{ userId=1; eventId=$e1.id; qty=3 } | ConvertTo-Json) | Out-Host
+  -Body (@{ userId=1; eventId=$e1.id; qty=3 } | ConvertTo-Json)
 
-Invoke-RestMethod -Method Post http://localhost:8081/bookings `
-  -ContentType application/json `
-  -Body (@{ userId=2; eventId=$e2.id; qty=4 } | ConvertTo-Json) | Out-Host
 
-# Exceeds capacity => expect HTTP 409
-try {
+Capacity guard (expected HTTP 409):
+
+try { 
   Invoke-RestMethod -Method Post http://localhost:8081/bookings `
-    -ContentType application/json `
-    -Body (@{ userId=3; eventId=$e2.id; qty=2 } | ConvertTo-Json)
+  -ContentType application/json `
+  -Body (@{ userId=3; eventId=$e2.id; qty=2 } | ConvertTo-Json)
 } catch { $_.Exception.Response.StatusCode.value__ }
 
-C) Real-time recommendations + explanations
+C) Recommendations & Explanations
 
-# Top-N by running popularity score (Kafka Streams state store)
+Top-N events:
+
 Invoke-RestMethod "http://localhost:8084/recommendations?limit=5" | ConvertTo-Json
 
-# Human-readable explanation (LLM if enabled, else rule-based)
+
+Human-readable explanation:
+
 Invoke-RestMethod "http://localhost:8084/explanations?eventId=$($e1.id)" | ConvertTo-Json
 
-D) CRUD sanity checks
-# Fetch a single booking (replace 1 with the ID you saw)
+D) CRUD Checks
 Invoke-RestMethod "http://localhost:8081/bookings/1" | ConvertTo-Json
-
-# Fetch a single event
 Invoke-RestMethod "http://localhost:8083/events/$($e1.id)" | ConvertTo-Json
 
-7) Stop / reset
-# stop services (Ctrl+C in each service terminal)
-# stop Kafka/Redpanda
+Stopping Everything
 docker compose down
 
-8) Troubleshooting (fast)
 
-Docker won’t start / virtualization → enable CPU virtualization; turn on Virtual Machine Platform + Windows Hypervisor Platform; install WSL2; reboot.
+Stop all microservices with CTRL+C.
 
-Ollama “port in use” → it’s already running (good).
+Troubleshooting
+Docker not starting
 
-LLM explanations look generic or time out → confirm the model is present:
-curl http://localhost:11434/api/tags shows llama3.2; re-export the three env vars and restart recommendation-service.
+Enable CPU virtualization
 
-Recommendations empty → create bookings first; the KTable only updates from the bookings topic.
+Turn on Virtual Machine Platform + Windows Hypervisor Platform
+
+Install WSL2
+
+Reboot
+
+LLM not responding
+
+Check model:
+
+curl http://localhost:11434/api/tags
+
+No recommendations
+
+You must create bookings first — the Kafka Streams state store only updates on booking events.
