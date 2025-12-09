@@ -64,7 +64,7 @@ Run this for formatting before doing anything
 # From repo root
 .\scripts\start.ps1     # starts Redpanda + opens 3 windows for services
 
-# …do your demo…
+Do your demo
 
 .\scripts\reset.ps1     # wipes Kafka topics back to clean (keeps services up)
 .\scripts\stop.ps1      # stops services and broker
